@@ -1,4 +1,3 @@
-// src/FishGame.js
 import React, { useEffect } from 'react';
 import Phaser from 'phaser';
 
@@ -6,8 +5,8 @@ const FishGame = () => {
     useEffect(() => {
         const config = {
             type: Phaser.AUTO,
-            width: window.innerWidth - 20,
-            height: window.innerHeight - 20,
+            width: window.innerWidth - 10,
+            height: window.innerHeight - 3,
             physics: {
                 default: 'arcade',
                 arcade: {
@@ -23,112 +22,199 @@ const FishGame = () => {
         };
 
         const game = new Phaser.Game(config);
-
-        let player;
-        let smallFish;
-        let shark;
-        let score = 0;
-        let scoreText;
-        let background;
+        let player, smallFishGroup, shark, score = 0, scoreText, background, clickToStart;
+        let fishCount = 0;
+        const maxFishCount = 20;
+        let isPlaying = false;
 
         function preload() {
-            this.load.image('player', 'assets/fish_user_close.png'); // Your fish image
-            this.load.image('smallFish', 'assets/fish_prey.png'); // Your small fish image
-            this.load.image('shark', 'assets/fish_predator_close.png'); // Your shark image
-            this.load.image('background', 'assets/bg.jpg'); // Your background image
+            this.load.image('player', 'assets/fish_user_close.png');
+            this.load.image('smallFish', 'assets/fish_prey.png');
+            this.load.image('shark', 'assets/circle.png');
+            this.load.image('background', 'assets/bg.png');
         }
 
         function create() {
-            // Add background image
             background = this.add.image(0, 0, 'background').setOrigin(0, 0);
             background.setDisplaySize(window.innerWidth, window.innerHeight);
 
-            player = this.physics.add.sprite(window.innerWidth / 2, window.innerHeight / 2, 'player');
-            player.setCollideWorldBounds(true);
-            player.setScale(0.1); // Scale player as needed
-            player.body.offset.x = 350;
-            player.body.setCircle(350);
+            player = this.physics.add.sprite(window.innerWidth / 2, window.innerHeight / 2, 'player')
+                .setCollideWorldBounds(true)
+                .setScale(0.1)
+                .setCircle(320);
+            player.body.offset.x = 400;
 
+            smallFishGroup = this.physics.add.group();
+            shark = this.physics.add.sprite(window.innerWidth, window.innerHeight / 2, 'shark')
+                .setCollideWorldBounds(true)
+                .setScale(0.2)
+                .setCircle(250);
+            // .setBodySize(0, 100);
 
-            smallFish = this.physics.add.group({
-                key: 'smallFish',
-                repeat: 11,
-                setXY: { x: 12, y: 0, stepX: 70 },
-            });
+            scoreText = this.add.text(50, 50, 'Score: 0', { fontSize: '32px', fill: '#000000' });
 
-            smallFish.children.iterate((child) => {
-                child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-                child.setScale(0.1); // Scale small fish as needed
-                child.setRandomPosition(0, 0, window.innerWidth, window.innerHeight); // Randomize position
-            });
+            clickToStart = this.add.text(window.innerWidth / 2, window.innerHeight / 2, 'Click to Play', {
+                fontSize: '48px',
+                fill: '#000',
+            }).setOrigin(0.5)
+                .setInteractive()
+                .on('pointerdown', () => {
+                    if (isPlaying == true) return;
 
-            shark = this.physics.add.sprite(window.innerWidth, window.innerHeight / 2, 'shark');
-            shark.setVelocityX(-200);
-            shark.setCollideWorldBounds(true);
-            shark.setBounce(1);
-            shark.setScale(0.1); // Scale shark as needed
+                    isPlaying = true;
+                    player.setVisible(true);
+                    shark.setVisible(true);
+                    score = 0;
+                    scoreText.setText('Score: ' + score);
+                    spawnFish();
+                    spawnFish();
+                    spawnFish();
 
-            scoreText = this.add.text(16, 16, 'Score: 0', {
-                fontSize: '32px',
-                fill: '#000000',
-            });
+                    this.time.addEvent({
+                        delay: 1000,
+                        callback: spawnFish,
+                        callbackScope: this,
+                        loop: true,
+                    });
+                });
 
-            this.physics.add.overlap(player, smallFish, eatFish, null, this);
+            this.physics.add.overlap(player, smallFishGroup, eatFish, null, this);
             this.physics.add.overlap(player, shark, hitShark, null, this);
         }
 
         function update() {
+            if (isPlaying) {
+                handlePlayerMovement.call(this);
+                // updateSharkDirection.call(this);
+
+                clickToStart.setText("");
+
+                const sharkSpeed = 80;
+
+                const angleToPlayer = Phaser.Math.Angle.Between(shark.x, shark.y, player.x, player.y);
+                shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer)); // Face the player
+
+                this.physics.moveToObject(shark, player, sharkSpeed);
+            }
+        }
+
+        function handlePlayerMovement() {
             const cursors = this.input.keyboard.createCursorKeys();
             const wKey = this.input.keyboard.addKey("W");
             const aKey = this.input.keyboard.addKey("A");
             const sKey = this.input.keyboard.addKey("S");
             const dKey = this.input.keyboard.addKey("D");
-
             const playerSpeed = 160;
-            const sharkSpeed = 80;
 
-            if (cursors.left.isDown || aKey.isDown) {
-                player.setVelocityX(-playerSpeed);
-            } else if (cursors.right.isDown || dKey.isDown) {
-                player.setVelocityX(playerSpeed);
-            } else {
-                player.setVelocityX(0);
-            }
+            player.setVelocity(0); // Reset velocity
+            player.setAngle(0);
 
-            if (cursors.up.isDown || wKey.isDown) {
+            const left = cursors.left.isDown || aKey.isDown;
+            const right = cursors.right.isDown || dKey.isDown;
+            const up = cursors.up.isDown || wKey.isDown;
+            const down = cursors.down.isDown || sKey.isDown;
+
+            if (left && up) {
+                player.setAngle(45);
+                player.body.offset.x = 50;
+                player.body.offset.y = -150;
+                player.flipX = true;
+
+                player.setVelocityX(-playerSpeed / 1.75);
+                player.setVelocityY(-playerSpeed / 1.75);
+
+            } else if (left && down) {
+                player.setAngle(-45);
+                player.body.offset.x = 50;
+                player.body.offset.y = 150;
+                player.flipX = true;
+
+                player.setVelocityX(-playerSpeed / 1.75);
+                player.setVelocityY(playerSpeed / 1.75);
+            } else if (right && up) {
+                player.setAngle(-45);
+                player.body.offset.x = 350;
+                player.body.offset.y = -100;
+                player.flipX = false;
+
+                player.setVelocityX(playerSpeed / 1.75);
+                player.setVelocityY(-playerSpeed / 1.75);
+            } else if (right && down) {
+                player.setAngle(45);
+                player.body.offset.x = 350;
+                player.body.offset.y = 100;
+                player.flipX = false;
+
+                player.setVelocityX(playerSpeed / 1.75);
+                player.setVelocityY(playerSpeed / 1.75);
+            } else if (up) {
                 player.setVelocityY(-playerSpeed);
-            } else if (cursors.down.isDown || sKey.isDown) {
+            } else if (down) {
                 player.setVelocityY(playerSpeed);
-            } else {
-                player.setVelocityY(0);
+            } else if (left) {
+                player.setVelocityX(-playerSpeed);
+                // player.setAngle(-180); // Face left
+                player.flipX = true;
+                player.setAngle(0);
+                player.body.offset.x = 0;
+                player.body.offset.y = 0;
+            } else if (right) {
+                player.setVelocityX(playerSpeed);
+                // player.setAngle(0); // Face right
+                player.flipX = false;
+                player.setAngle(0);
+                player.body.offset.x = 400;
+                player.body.offset.y = 0;
             }
 
-            // Move the shark toward the player
-            this.physics.moveToObject(shark, player, sharkSpeed);
+            if ((up || down) && !(left || right)) {
+                if (player.flipX) {
+                    player.body.offset.x = 0;
+                    player.body.offset.y = 0;
+                } else {
+                    player.body.offset.x = 400;
+                    player.body.offset.y = 0;
+                }
+            }
+        }
+
+        function spawnFish() {
+            if (fishCount < maxFishCount) {
+                const fish = smallFishGroup.create(Phaser.Math.Between(0, window.innerWidth),
+                    Phaser.Math.Between(0, window.innerHeight), 'smallFish');
+                fish.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8)).setScale(0.1);
+                fish.setRandomPosition(100, 100, window.innerWidth - 100, window.innerHeight - 100);
+                fishCount++;
+            }
         }
 
         function eatFish(player, fish) {
             fish.destroy();
-            score += 1;
+            score++;
             scoreText.setText('Score: ' + score);
+            fishCount--;
         }
 
         function hitShark() {
-            this.physics.pause();
-            scoreText.setText('Game Over! Final Score: ' + score + '\nPress R to Restart');
+            scoreText.setText('Game Over! Final Score: ' + score + '\nClick to Restart');
+            this.physics.pause(); // Pause the game
 
-            // Restart the game when R is pressed
-            this.input.keyboard.once('keydown-R', () => {
+            // Clear any existing pointerdown events to avoid multiple bindings
+            this.input.off('pointerdown');
+
+            // Restart the game on pointer down
+            this.input.on('pointerdown', () => {
                 this.scene.restart();
                 score = 0;
                 scoreText.setText('Score: ' + score);
+                isPlaying = false; // Reset the game state
+                clickToStart.setText('Click to Play'); // Reset the start text
             });
         }
 
-        // Handle window resize
         const resizeGame = () => {
             game.scale.resize(window.innerWidth, window.innerHeight);
-            background.setDisplaySize(window.innerWidth, window.innerHeight); // Resize background
+            background.setDisplaySize(window.innerWidth, window.innerHeight);
         };
 
         window.addEventListener('resize', resizeGame);
