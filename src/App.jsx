@@ -5,7 +5,7 @@ import FishGame from './FishGame';
 function App() {
   return (
     <div className="App">
-      <h1>Fish Game</h1>
+      {/* <h1>Fish Game</h1> */}
       <FishGame />
     </div>
   );
