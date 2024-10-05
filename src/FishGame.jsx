@@ -1,7 +1,33 @@
-import React, { useEffect } from 'react';
+// FishGame.js
+import React, { useEffect, useState, useCallback } from 'react';
 import Phaser from 'phaser';
+import { useContract, useContractWrite } from "@thirdweb-dev/react";
+import { FISH_GAME_ADDRESS_MANTA } from './config';
 
-const FishGame = () => {
+const FishGame = ({ initialPlayerState }) => {
+    const [playerState, setPlayerState] = useState({
+        score: initialPlayerState?.playerScore?.toNumber() || 0,
+        fishSize: initialPlayerState?.fishSize?.toNumber() || 0
+    });
+    const [game, setGame] = useState(null);
+
+    const { contract } = useContract(FISH_GAME_ADDRESS_MANTA);
+    const { mutateAsync: eatFishOnChain, isLoading } = useContractWrite(contract, "eatFish");
+
+    const eatFish = useCallback(async () => {
+        if (isLoading) return;
+        try {
+            await eatFishOnChain({ args: [] });
+            console.log('Fish eaten on blockchain!');
+            setPlayerState(prev => ({
+                score: prev.score + 1,
+                fishSize: prev.fishSize + 1
+            }));
+        } catch (error) {
+            console.error('Error eating fish on blockchain:', error);
+        }
+    }, [eatFishOnChain, isLoading]);
+
     useEffect(() => {
         const config = {
             type: Phaser.AUTO,
@@ -15,13 +41,14 @@ const FishGame = () => {
                 },
             },
             scene: {
-                preload,
-                create,
-                update,
+                preload: preload,
+                create: create,
+                update: update,
             },
         };
 
-        const game = new Phaser.Game(config);
+        const newGame = new Phaser.Game(config);
+        setGame(newGame);
         let player, smallFishGroup, shark, score = 0, scoreText, background, clickToStart;
         let fishCount = 0;
         const maxFishCount = 20;
@@ -33,7 +60,6 @@ const FishGame = () => {
             this.load.image('shark', 'assets/fish_predator_close.png');
             this.load.image('background', 'assets/bg.png');
         }
-
         function create() {
             background = this.add.image(0, 0, 'background').setOrigin(0, 0);
             background.setDisplaySize(window.innerWidth, window.innerHeight);
@@ -51,7 +77,6 @@ const FishGame = () => {
                 .setCircle(450);
             shark.body.offset.x = 400;
             shark.body.offset.y = 350;
-            // .setBodySize(0, 100);
 
             scoreText = this.add.text(50, 50, 'Score: 0', { fontSize: '32px', fill: '#000000' });
 
@@ -82,34 +107,25 @@ const FishGame = () => {
                     });
                 });
 
-            this.physics.add.overlap(player, smallFishGroup, eatFish, null, this);
-            this.physics.add.overlap(player, shark, hitShark, null, this);
-
-            // self.physics.world.setBoundsCollision(true, true, true, true);
+                this.physics.add.overlap(player, smallFishGroup, eatFishInGame, null, this);
+                this.physics.add.overlap(player, shark, hitShark, null, this);
         }
 
         function update() {
             if (isPlaying) {
                 handlePlayerMovement.call(this);
-                // updateSharkDirection.call(this);
-
                 clickToStart.setText("");
 
                 const sharkSpeed = 80;
-
                 const angleToPlayer = Phaser.Math.Angle.Between(shark.x, shark.y, player.x, player.y);
 
                 if (Phaser.Math.RadToDeg(angleToPlayer) > -90 && Phaser.Math.RadToDeg(angleToPlayer) <= 90) {
                     shark.flipX = false;
-                    // console.log("flip");
-                    shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer)); // Face the player
+                    shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer));
                 } else {
                     shark.flipX = true;
-                    // console.log("non flip")
-                    shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer) - 180); // Face the player
+                    shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer) - 180);
                 }
-
-                // console.log(Phaser.Math.RadToDeg(angleToPlayer))
 
                 this.physics.moveToObject(shark, player, sharkSpeed);
             }
@@ -250,44 +266,49 @@ const FishGame = () => {
         }
 
 
-        function eatFish(player, fish) {
+        async function eatFishInGame(player, fish) {
             fish.destroy();
             score++;
             scoreText.setText('Score: ' + score);
             fishCount--;
+            await eatFish(); // Call the blockchain function
         }
 
         function hitShark() {
             scoreText.setText('Game Over! Final Score: ' + score + '\nClick to Restart');
-            this.physics.pause(); // Pause the game
+            this.physics.pause();
 
-            // Clear any existing pointerdown events to avoid multiple bindings
             this.input.off('pointerdown');
 
-            // Restart the game on pointer down
             this.input.on('pointerdown', () => {
                 this.scene.restart();
                 score = 0;
                 scoreText.setText('Score: ' + score);
-                isPlaying = false; // Reset the game state
-                clickToStart.setText('Click to Play'); // Reset the start text
+                isPlaying = false;
+                clickToStart.setText('Click to Play');
             });
         }
 
         const resizeGame = () => {
-            game.scale.resize(window.innerWidth, window.innerHeight);
+            newGame.scale.resize(window.innerWidth, window.innerHeight);
             background.setDisplaySize(window.innerWidth, window.innerHeight);
         };
 
         window.addEventListener('resize', resizeGame);
 
         return () => {
-            game.destroy(true);
+            newGame.destroy(true);
             window.removeEventListener('resize', resizeGame);
         };
-    }, []);
+    }, [eatFish]);
 
-    return <div id="game-container" />;
+    return (
+        <div id="game-container">
+            <div style={{ position: 'absolute', top: 10, left: 10, color: 'white', fontSize: '24px', backgroundColor: 'rgba(0,0,0,0.5)', padding: '10px' }}>
+                Blockchain Score: {playerState.score}, Fish Size: {playerState.fishSize}
+            </div>
+        </div>
+    );
 };
 
 export default FishGame;
