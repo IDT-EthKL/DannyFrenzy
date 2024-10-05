@@ -1,28 +1,9 @@
 import React from 'react';
 import { ThirdwebProvider, ConnectWallet, useAddress, useChain, useSwitchChain } from "@thirdweb-dev/react";
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import FishGame from './FishGame';
-
-const MANTA_PACIFIC_SEPOLIA = {
-  chainId: 3441006,
-  rpc: ["https://pacific-rpc.sepolia-testnet.manta.network/http"],
-  nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
-  shortName: "manta-sepolia",
-  slug: "manta-sepolia",
-  testnet: true,
-  chain: "Manta Pacific Sepolia",
-  name: "Manta Pacific Sepolia Testnet",
-};
-
-const SCROLL_SEPOLIA = {
-  chainId: 534351,
-  rpc: ["https://sepolia-rpc.scroll.io"],
-  nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
-  shortName: "scroll-sepolia",
-  slug: "scroll-sepolia",
-  testnet: true,
-  chain: "Scroll Sepolia",
-  name: "Scroll Sepolia Testnet",
-};
+import DataExplorer from './DataExplorer';
+import { MANTA_PACIFIC_SEPOLIA, SCROLL_SEPOLIA } from './chainConfig';
 
 const supportedChains = [MANTA_PACIFIC_SEPOLIA, SCROLL_SEPOLIA];
 
@@ -33,14 +14,24 @@ function App() {
       clientId="531042ef20779384d571e53ab4973e63"
       supportedChains={supportedChains}
     >
-      <div className="App" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '40px', margin: 0 }}>Danny Frenzy</h1>
-          <ConnectWallet />
+      <Router>
+        <div className="App" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h1 style={{ fontSize: '40px', margin: 0 }}>Danny Frenzy</h1>
+            <div>
+              <Link to="/explorer" style={{ marginRight: '20px' }}>
+                <button style={{ padding: '10px 20px' }}>Data Explorer</button>
+              </Link>
+              <ConnectWallet />
+            </div>
+          </div>
+          <Routes>
+            <Route path="/" element={<MainContent />} />
+            <Route path="/explorer" element={<DataExplorer />} />
+          </Routes>
         </div>
-        <MainContent />
-      </div>
-      <style>{'body { background-image: url(../public/assets/bg.png); background-size: cover; margin: 0; padding: 0; }'}</style>
+        <style>{'body { background-image: url(../public/assets/bg.png); background-size: cover; margin: 0; padding: 0; }'}</style>
+      </Router>
     </ThirdwebProvider>
   );
 }

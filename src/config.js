@@ -16,3 +16,4 @@ export const REWARD_TOKEN_ADDRESS = {
   [MANTA_PACIFIC_SEPOLIA.chainId]: "0xe3ba6f3debe7c639c6f57bfc451ce3fe979748e3", // Replace with actual address
   [SCROLL_SEPOLIA.chainId]: "0x893677ba1b1f794bbc836ac3fb8f5950a0c47436" // Replace with actual address
 };
+
