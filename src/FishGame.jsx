@@ -30,7 +30,7 @@ const FishGame = () => {
         function preload() {
             this.load.image('player', 'assets/fish_user_close.png');
             this.load.image('smallFish', 'assets/fish_prey.png');
-            this.load.image('shark', 'assets/circle.png');
+            this.load.image('shark', 'assets/fish_predator_close.png');
             this.load.image('background', 'assets/bg.png');
         }
 
@@ -47,11 +47,15 @@ const FishGame = () => {
             smallFishGroup = this.physics.add.group();
             shark = this.physics.add.sprite(window.innerWidth, window.innerHeight / 2, 'shark')
                 .setCollideWorldBounds(true)
-                .setScale(0.2)
-                .setCircle(250);
+                .setScale(0.11)
+                .setCircle(450);
+            shark.body.offset.x = 400;
+            shark.body.offset.y = 350;
             // .setBodySize(0, 100);
 
             scoreText = this.add.text(50, 50, 'Score: 0', { fontSize: '32px', fill: '#000000' });
+
+            shark.setVisible(false);
 
             clickToStart = this.add.text(window.innerWidth / 2, window.innerHeight / 2, 'Click to Play', {
                 fontSize: '48px',
@@ -80,6 +84,8 @@ const FishGame = () => {
 
             this.physics.add.overlap(player, smallFishGroup, eatFish, null, this);
             this.physics.add.overlap(player, shark, hitShark, null, this);
+
+            // self.physics.world.setBoundsCollision(true, true, true, true);
         }
 
         function update() {
@@ -92,7 +98,18 @@ const FishGame = () => {
                 const sharkSpeed = 80;
 
                 const angleToPlayer = Phaser.Math.Angle.Between(shark.x, shark.y, player.x, player.y);
-                shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer)); // Face the player
+
+                if (Phaser.Math.RadToDeg(angleToPlayer) > -90 && Phaser.Math.RadToDeg(angleToPlayer) <= 90) {
+                    shark.flipX = false;
+                    // console.log("flip");
+                    shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer)); // Face the player
+                } else {
+                    shark.flipX = true;
+                    // console.log("non flip")
+                    shark.setAngle(Phaser.Math.RadToDeg(angleToPlayer) - 180); // Face the player
+                }
+
+                // console.log(Phaser.Math.RadToDeg(angleToPlayer))
 
                 this.physics.moveToObject(shark, player, sharkSpeed);
             }
@@ -182,11 +199,56 @@ const FishGame = () => {
             if (fishCount < maxFishCount) {
                 const fish = smallFishGroup.create(Phaser.Math.Between(0, window.innerWidth),
                     Phaser.Math.Between(0, window.innerHeight), 'smallFish');
-                fish.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8)).setScale(0.1);
+                fish.setBounceY(Phaser.Math.FloatBetween(0.7, 1)).setBounceX(Phaser.Math.FloatBetween(0.7, 1)).setScale(0.1);
                 fish.setRandomPosition(100, 100, window.innerWidth - 100, window.innerHeight - 100);
                 fishCount++;
+
+                fish.body.collideWorldBounds = true;
+                fish.body.onWorldBounds = true;
+
+                moveFish.call(this, fish);
             }
         }
+
+        async function moveFish(fish) {
+            const randomAngle = Phaser.Math.FloatBetween(0, 360);
+            const speed = Phaser.Math.FloatBetween(50, 100);
+
+            fish.setVelocity(
+                Math.cos(Phaser.Math.DegToRad(randomAngle)) * speed,
+                Math.sin(Phaser.Math.DegToRad(randomAngle)) * speed
+            );
+
+            // Check boundaries and reverse direction if necessary
+            const checkBounds = () => {
+                const screenBounds = {
+                    left: 0,
+                    right: window.innerWidth,
+                    top: 0,
+                    bottom: window.innerHeight,
+                };
+
+                // Reverse direction if out of bounds
+                if (fish.x < screenBounds.left || fish.x > screenBounds.right) {
+                    fish.setVelocityX(-fish.body.velocity.x);
+                }
+                if (fish.y < screenBounds.top || fish.y > screenBounds.bottom) {
+                    fish.setVelocityY(-fish.body.velocity.y);
+                }
+
+                // Continue moving fish
+                moveFish(fish); // Call moveFish again for continuous movement
+            };
+
+            // Change direction randomly every 2 seconds
+            // this.time.addEvent({
+            //     delay: 2000,
+            //     callback: checkBounds,
+            //     callbackScope: this,
+            //     loop: false,
+            // });
+        }
+
 
         function eatFish(player, fish) {
             fish.destroy();

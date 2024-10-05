@@ -9,6 +9,8 @@ function App() {
 
   // if (!walletAddress) alert("Haven't sign in with Metamask"); connectWallet();
 
+  connectWallet();
+
   return (
     <div className="App">
       {/* <h1>Fish Game</h1> */}
