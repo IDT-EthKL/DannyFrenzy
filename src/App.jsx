@@ -27,6 +27,19 @@ const SCROLL_SEPOLIA = {
 
 const supportedChains = [MANTA_PACIFIC_SEPOLIA, SCROLL_SEPOLIA];
 
+const CustomConnectWallet = () => {
+  return (
+    <div style={{
+      position: 'absolute',
+      top: '10px',
+      right: '10px',
+      zIndex: 1000
+    }}>
+      <ConnectWallet />
+    </div>
+  );
+};
+
 function App() {
   return (
     <ThirdwebProvider
@@ -35,13 +48,14 @@ function App() {
       supportedChains={supportedChains}
     >
       <div className="App">
-        <ConnectWallet />
+        <CustomConnectWallet />
         <MainContent />
       </div>
       <style>{'body { background-image: url(../public/assets/bg.png); background-size: cover}'}</style>
     </ThirdwebProvider>
   );
 }
+
 
 function MainContent() {
   const address = useAddress();
