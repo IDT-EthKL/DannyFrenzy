@@ -1,4 +1,3 @@
-// App.js
 import React from 'react';
 import { ThirdwebProvider, ConnectWallet, useAddress, useChain, useSwitchChain } from "@thirdweb-dev/react";
 import FishGame from './FishGame';
@@ -34,11 +33,14 @@ function App() {
       clientId="531042ef20779384d571e53ab4973e63"
       supportedChains={supportedChains}
     >
-      <div className="App">
-        <ConnectWallet />
+      <div className="App" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '40px', margin: 0 }}>Danny Frenzy</h1>
+          <ConnectWallet />
+        </div>
         <MainContent />
       </div>
-      <style>{'body { background-image: url(../public/assets/bg.png); background-size: cover}'}</style>
+      <style>{'body { background-image: url(../public/assets/bg.png); background-size: cover; margin: 0; padding: 0; }'}</style>
     </ThirdwebProvider>
   );
 }
@@ -53,8 +55,7 @@ function MainContent() {
 
   if (!address) {
     return (
-      <div style={{ maxWidth: "fit-content", position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-        <h1 style={{ textAlign: 'center', fontSize: '80px' }}>Danny Frenzy</h1>
+      <div style={{ textAlign: 'center', marginTop: '50px' }}>
         <p>Please connect your wallet to play.</p>
       </div>
     );
@@ -95,7 +96,7 @@ function MainContent() {
       {(chain?.chainId === MANTA_PACIFIC_SEPOLIA.chainId || chain?.chainId === SCROLL_SEPOLIA.chainId) ? (
         <FishGame />
       ) : (
-        <p>Please select either Manta Pacific Sepolia or Scroll Sepolia network to play.</p>
+        <p style={{ textAlign: 'center' }}>Please select either Manta Pacific Sepolia or Scroll Sepolia network to play.</p>
       )}
     </div>
   );
